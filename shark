@@ -1,1 +1,169 @@
-This is a shark bot for auto clicking
+import os
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from prettytable import PrettyTable
+
+mail =  input("Enter Your Email: ")
+passw = input("Enter your password: ")
+
+
+driver_path = r'C:\\Program Files (x86)\\chromedriver'
+os.environ['PATH'] += driver_path
+
+option = Options()
+option.add_argument("--disable-gpu")
+option.add_argument("--headless")
+option.add_argument("--window-size=1440, 900")
+option.add_experimental_option('excludeSwitches',['enable-logging'])
+driver = webdriver.Chrome(driver_path,options=option)
+driver.get("{url}")
+ #self.driver.implicitly_wait(2) #  wait 2 seconds before click button
+wait = WebDriverWait(driver, 10) 
+
+class bot():
+    
+    def __init__(self, mail,passw):
+        self.mail = mail
+        self.passw = passw
+        
+      
+    def login(self):
+        try:
+            acct_but = wait.until(
+            EC.presence_of_element_located((By.CLASS_NAME, "auth__block")))
+        finally:
+            #acct_but = driver.find_element_by_xpath('//*[@id="bodystart"]/header/div/div/div/div')
+            acct_but.click()
+      
+        driver.implicitly_wait(3) # wait 2 sec before filling in
+      
+        username_textbox = driver.find_element_by_xpath('//*[@id="bodystart"]/div[11]/div/div[2]/div[2]/div/div/form/div[1]/div[1]/div/input')
+        username_textbox.send_keys(self.mail)
+      
+        password_textbox = driver.find_element_by_xpath('//*[@id="bodystart"]/div[11]/div/div[2]/div[2]/div/div/form/div[1]/div[2]/div[1]/input')
+        password_textbox.send_keys(self.passw)
+
+        driver.implicitly_wait(1)
+      
+        login_button =driver.find_element_by_xpath('//*[@id="bodystart"]/div[11]/div/div[2]/div[2]/div/div/form/div[1]/div[3]/button')
+        login_button.submit()
+    
+        print("Login.........")
+    
+    def check_order(self):
+        try:
+            wait.until(EC.visibility_of_element_located((By.LINK_TEXT, 'Orders')))
+        finally:
+            orderck = driver.find_element(By.LINK_TEXT, 'Orders')
+            orderck.click()
+            print("Login Successful")
+            print("Clicking on orders")   
+            #driver.refresh()
+    
+    def order(self):
+        self.leger = []
+        try:
+         #wait.until(EC.visibility_of_element_located((By.XPATH, "//span[contains(@class,'orders_list_info_filtered_qty')]")))
+             counterz = wait.until(EC.visibility_of_element_located((By.CLASS_NAME,'orders_list_info_filtered_qty')))
+             count = counterz.get_attribute('innerHTML').strip()
+        except:
+            # counter = driver.find_element_by_xpath("//span[contains(@class,'orders_list_info_filtered_qty')]")
+            counter = driver.find_element(By.CSS_SELECTOR,'span.orders_list_info_filtered_qty')
+            count = counter.get_attribute('innerHTML').strip()
+            #print(count)
+            driver.implicitly_wait(5)
+        if (int(count)) > 0:
+            print("Orders Available: \n",count)
+            orders = driver.find_element(By.ID,'available_orders_list_container').find_elements(By.CLASS_NAME,'order_container normal_order')
+            # This iterates through the orders available and clicks each order
+            print("Bidding.....") 
+            for order in orders:
+                clik_order = order.find_element(By.CLASS_NAME,'order_number')
+                href=clik_order.get_attribute('href')
+                href.click()
+                # order.find_elemennt_by_css_selector(a["href"])
+                # click()
+            # This is the bidding part
+                apply_textbox = wait.until(EC.visibility_of_element_located((By.ID,'id_bid')))
+        
+                rec_amt = driver.find_element(By.ID,'rec_amount').get_attribute('Text')
+                bid_amt = (int(rec_amt)) + 5
+                apply_textbox.send_keys(bid_amt)
+            
+            # submit order
+                apply_button = driver.find_element_by_class_name('btn_f_submit')
+                apply_button.submit()
+                
+            # Append order number, topic and bidded amount to leger
+            # get order number
+                ord_numz = order.find_element(By.CLASS_NAME,'order_number')
+                ord_num = ord_numz.get_attribute('innerHTML').strip()
+            
+            # get the topic of the order
+                topicz = order.find_element(By.CLASS_NAME,'topictitle')
+                topic = topicz.get_attribute('innerText').strip()
+            
+            #leger.append(ord_num,topic,bid_amt)
+                self.leger.append(
+                    [ord_num, topic, bid_amt]
+                    )
+                
+                print("Bid complete!!\n")
+            # go back to orders page    
+                orderck = driver.find_element(By.LINK_TEXT, 'Orders')
+                orderck.click()
+            
+        else:
+            print("[!!!] No orders Available...\n")
+            #print("Refreshing Page")
+            #driver.refresh()
+            orderck = driver.find_element(By.LINK_TEXT, 'Orders')
+            orderck.click()
+            
+    def check_alert(self):
+        try:
+            wait.until(EC.visibility_of_element_located((By.CLASS_NAME,'ZebraDialog')))
+            alert_box = driver.find_element(By.CLASS_NAME,'ZebraDialog_Button_0')
+            alert_box.click()
+        except:
+            pass
+    
+    def display_orders(self):
+        if len(self.leger) == 3:
+            table = PrettyTable(
+                fields_name =["ORDER NUMBER","TOPIC","BIDDED AMOUNT"]
+                )
+            table.add_rows(self.leger)
+            print(table)
+            # clear leger
+            del self.leger[:]
+        else:
+            pass
+           
+if __name__ == '__main__':
+    try:
+        b = bot(mail,passw)
+        b.login()
+        b.check_order()
+        while True:
+            b.order()
+            b.display_orders()
+            print("Refreshing Page")
+            driver.refresh()
+            b.check_alert()
+    except Exception as e:
+        if 'in PATH' in str(e):
+            print('You have not yet set the path of the driver necessary to run the bot \n'
+                  'In order to set the path \n'
+                  'Windows: \n'
+                  "       set PATH=%PATH%;e.g set PATH = C:Philip\Downloads\chromedriver.exe\' \n"
+                  'Linux: \n'
+                  '     PATH=$PATH:/path/to-your/folder/ \n'
+                  )
+        else:
+            #raise
+            driver.quit()
+  
